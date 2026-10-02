@@ -8,7 +8,7 @@ import {
   newOrderCod,
   newOrderOnline,
   updateStatus,
-  verifyPayment,
+  verifyEsewaPayment,
 } from "../controller/order.js";
 
 const router = express.Router();
@@ -20,6 +20,6 @@ router.get("/order/:id", isAuth, getMyOrder);
 router.post("/order/:id", isAuth, updateStatus);
 router.get("/stats", isAuth, getStats);
 router.post("/order/new/online", isAuth, newOrderOnline);
-router.post("/order/verify/payment", isAuth, verifyPayment);
+router.post("/order/verify/esewa", isAuth, verifyEsewaPayment);
 
 export default router;

@@ -38,6 +38,56 @@ const productSchema = new mongoose.Schema({
     type: Date,
     default: Date.now(),
   },
+
+//   reviews: [
+//   {
+//     user: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: "User",
+//       required: true,
+//     },
+//     name: String,
+//     rating: Number,
+//     comment: String,
+//   },
+// ],
+
+
+reviews: [
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    name: String,
+    rating: Number,
+    comment: String,
+
+    likes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+],
+
+numReviews: {
+  type: Number,
+  default: 0,
+},
+
+rating: {
+  type: Number,
+  default: 0, // average rating
+},
+
 });
 
 export const Product = mongoose.model("Product", productSchema);

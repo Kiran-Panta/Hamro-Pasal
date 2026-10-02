@@ -1,6 +1,13 @@
-import { LogIn, ShoppingCart , User } from "lucide-react";
-import React from "react";
-import {  useNavigate } from "react-router-dom";
+import {
+  LogIn,
+  ShoppingCart,
+  User,
+  Search,
+  Heart,
+} from "lucide-react";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,70 +16,242 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+
 import { ModeToggle } from "./mode-toggle";
+import { UserData } from "@/context/UserContext";
+import { CartData } from "@/context/CartContext";
+import { ProductData } from "@/context/ProductContext";
+import { WishlistData } from "@/context/WishlistContext";
 
 const Navbar = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const isAuth = true;
+  const { products } = ProductData();
 
-    const logoutHandler = () => {
-    alert ("Logged Out")
+  const { isAuth, logoutUser, user } = UserData();
+
+  const { totalItem, setTotalItem } = CartData();
+
+  const { wishlist } = WishlistData();
+
+  const wishlistCount = wishlist?.length || 0;
+
+  const [search, setSearch] = useState("");
+
+  const logoutHandler = () => {
+    logoutUser(navigate, setTotalItem);
   };
 
-  return (
-    <div className="z-50 sticky top-0 bg-background/50 border-b backdrop-blur">
-      <div className="container mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between">
-        <h1 className="text-2xl font-bold">Dai Ko Pasal</h1>
-        <ul className="flex justify-center items-center space-x-6">
-            <li className="cursor-pointer" onClick={() => navigate("/")}>
-            Home
-          </li>
-          <li className="cursor-pointer" onClick={() => navigate("/products")}>
-            Products
-          </li>
-          <li
-            className="cursor-pointer relative flex items-center"
-            onClick={() => navigate("/cart")}
-          >
-            <ShoppingCart className="w-6 h-6" />
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-              5
-            </span>
-          </li>
+  // Search products
+  const handleSearch = (e) => {
+    e.preventDefault();
 
-          <li className="cursor-pointer">
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                {isAuth ? <User /> : <LogIn />}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {!isAuth ? (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate("/login")}>
-                      Login
-                    </DropdownMenuItem>
-                  </>
+    if (!search.trim()) return;
+
+    navigate(
+      `/products?search=${encodeURIComponent(search.trim())}`
+    );
+
+    setSearch("");
+  };
+
+  // Search suggestions
+  const filteredProducts =
+    search.trim() === ""
+      ? []
+      : products
+          ?.filter((p) =>
+            p.title.toLowerCase().includes(search.toLowerCase())
+          )
+          .slice(0, 5);
+
+  return (
+    <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0d0e10]/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-800 transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
+        {/* LOGO */}
+        <h1
+          onClick={() => navigate("/")}
+          className="text-xl md:text-2xl font-bold tracking-tight cursor-pointer text-gray-900 dark:text-white"
+        >
+          Hamro
+          <span className="text-[#2874f0] dark:text-[#5b9cf6]">
+            Pasal
+          </span>
+        </h1>
+
+        {/* NAVIGATION LINKS */}
+        <nav className="hidden md:flex items-center gap-5 text-sm font-medium">
+          <button
+            onClick={() => navigate("/")}
+            className="text-gray-600 dark:text-gray-400 hover:text-[#2874f0] dark:hover:text-[#5b9cf6] transition"
+          >
+            Home
+          </button>
+
+          <button
+            onClick={() => navigate("/products")}
+            className="text-gray-600 dark:text-gray-400 hover:text-[#2874f0] dark:hover:text-[#5b9cf6] transition"
+          >
+            Products
+          </button>
+
+          <button
+            onClick={() => navigate("/about")}
+            className="text-gray-600 dark:text-gray-400 hover:text-[#2874f0] dark:hover:text-[#5b9cf6] transition"
+          >
+            About
+          </button>
+
+          <button
+            onClick={() => navigate("/contact")}
+            className="text-gray-600 dark:text-gray-400 hover:text-[#2874f0] dark:hover:text-[#5b9cf6] transition"
+          >
+            Contact
+          </button>
+        </nav>
+
+        {/* SEARCH BAR */}
+        <div className="relative flex-1 max-w-md hidden sm:block">
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center bg-gray-100 dark:bg-[#17181c] border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-1"
+          >
+            <Search className="w-4 h-4 text-gray-500" />
+
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full px-2 py-1 bg-transparent outline-none text-sm"
+            />
+          </form>
+
+          {/* SEARCH SUGGESTIONS */}
+          {filteredProducts.length > 0 && (
+            <div className="absolute top-full mt-2 w-full bg-white dark:bg-[#17181c] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+              {filteredProducts.map((product) => (
+                <Link
+                  key={product._id}
+                  to={`/product/${product._id}`}
+                  onClick={() => setSearch("")}
+                  className="flex items-center gap-3 p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  <img
+                    src={product.images?.[0]?.url}
+                    alt={product.title}
+                    className="w-10 h-10 object-cover rounded"
+                  />
+
+                  <div>
+                    <p className="text-sm font-medium">
+                      {product.title}
+                    </p>
+
+                    <p className="text-xs text-blue-600">
+                      Rs {product.price}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT SIDE ACTIONS */}
+        <div className="flex items-center gap-4">
+          {/* WISHLIST */}
+          <Link
+            to="/wishlist"
+            className="relative text-gray-600 dark:text-gray-400 hover:text-red-500 transition"
+          >
+            <Heart className="w-5 h-5" />
+
+            {wishlistCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                {wishlistCount}
+              </span>
+            )}
+          </Link>
+
+          {/* CART */}
+          <button
+            onClick={() => navigate("/cart")}
+            className="relative text-gray-600 dark:text-gray-400 hover:text-[#2874f0] dark:hover:text-[#5b9cf6] transition"
+          >
+            <ShoppingCart className="w-5 h-5" />
+
+            {totalItem > 0 && (
+              <span className="absolute -top-2 -right-2 bg-[#2874f0] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                {totalItem}
+              </span>
+            )}
+          </button>
+
+          {/* THEME */}
+          <ModeToggle />
+
+          {/* USER ACCOUNT */}
+          <DropdownMenu>
+            <DropdownMenuTrigger className="outline-none">
+              <div className="p-1.5 rounded-md bg-gray-100 dark:bg-[#17181c] hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                {isAuth ? (
+                  <User className="w-5 h-5 text-gray-700 dark:text-gray-200" />
                 ) : (
-                  <>
-                    <DropdownMenuItem onClick={() => navigate("/orders")}>
-                      Your Order
-                    </DropdownMenuItem>
-                    
-                    <DropdownMenuItem onClick={logoutHandler}>
-                      Logout
-                    </DropdownMenuItem>
-                  </>
+                  <LogIn className="w-5 h-5 text-gray-700 dark:text-gray-200" />
                 )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </li>
-        <ModeToggle />
-        </ul>
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-44 bg-white dark:bg-[#17181c] border border-gray-200 dark:border-gray-800">
+              <DropdownMenuLabel>
+                {isAuth ? user?.name || "Account" : "Account"}
+              </DropdownMenuLabel>
+
+              <DropdownMenuSeparator />
+
+              {!isAuth ? (
+                <DropdownMenuItem
+                  onClick={() => navigate("/login")}
+                >
+                  Login
+                </DropdownMenuItem>
+              ) : (
+                <>
+                  {/* MY ACCOUNT */}
+                  <DropdownMenuItem
+                    onClick={() => navigate("/account")}
+                  >
+                    My Account
+                  </DropdownMenuItem>
+
+                  {/* ORDERS */}
+                  <DropdownMenuItem
+                    onClick={() => navigate("/orders")}
+                  >
+                    Orders
+                  </DropdownMenuItem>
+
+                  {/* ADMIN DASHBOARD */}
+                  {user?.role === "admin" && (
+                    <DropdownMenuItem
+                      onClick={() => navigate("/admin/dashboard")}
+                    >
+                      Dashboard
+                    </DropdownMenuItem>
+                  )}
+
+                  {/* LOGOUT */}
+                  <DropdownMenuItem onClick={logoutHandler}>
+                    Logout
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
-    </div>
+    </header>
   );
 };
 

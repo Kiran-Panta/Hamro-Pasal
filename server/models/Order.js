@@ -8,10 +8,19 @@ const schema = new mongoose.Schema(
           type: Number,
           required: true,
         },
+
         product: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
           required: true,
+        },
+
+        name: {
+          type: String,
+        },
+
+        price: {
+          type: Number,
         },
       },
     ],
@@ -19,9 +28,16 @@ const schema = new mongoose.Schema(
     method: {
       type: String,
       required: true,
+      enum: ["cod", "online"],
     },
 
+    // Keep our own eSewa transaction UUID
     paymentInfo: {
+      type: String,
+    },
+
+    // eSewa's returned reference/transaction code
+    paymentReference: {
       type: String,
     },
 
@@ -43,11 +59,19 @@ const schema = new mongoose.Schema(
 
     status: {
       type: String,
+      enum: [
+        "Pending",
+        "Paid",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+      ],
       default: "Pending",
     },
 
     paidAt: {
-      type: String,
+      type: Date,
     },
 
     subTotal: {

@@ -1,81 +1,324 @@
-import { OTP } from "../models/Otp.js";
+// import { OTP } from "../models/Otp.js";
+// import { User } from "../models/User.js";
+// import TryCatch from "../utils/TryCatch.js";
+// import sendOtp from "../utils/sendOtp.js";
+// import jwt from "jsonwebtoken";
+
+// export const loginUser = TryCatch(async (req, res) => {
+//   const { email } = req.body;
+
+//   const subject = "Ecommerce App";
+
+//   const otp = Math.floor(Math.random() * 1000000);
+
+//   const prevOtp = await OTP.findOne({
+//     email,
+//   });
+
+//   if (prevOtp) {
+//     await prevOtp.deleteOne();
+//   }
+
+//   await sendOtp({ email, subject, otp });
+
+//   await OTP.create({ email, otp });
+
+//   res.json({
+//     message: "Otp send to your mail",
+//   });
+// });
+
+// export const verifyUser = TryCatch(async (req, res) => {
+//   const { email, otp } = req.body;
+
+//   const haveOtp = await OTP.findOne({
+//     email,
+//     otp,
+//   });
+
+//   if (!haveOtp)
+//     return res.status(400).json({
+//       message: "Wrong otp",
+//     });
+
+//   let user = await User.findOne({ email });
+
+//   if (user) {
+//     const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
+//       expiresIn: "15d",
+//     });
+
+//     await haveOtp.deleteOne();
+
+//     res.json({
+//       message: "User LoggedIn",
+//       token,
+//       user,
+//     });
+//   } else {
+//     user = await User.create({
+//       email,
+//     });
+
+//     const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
+//       expiresIn: "15d",
+//     });
+
+//     await haveOtp.deleteOne();
+
+//     res.json({
+//       message: "User LoggedIn",
+//       token,
+//       user,
+//     });
+//   }
+// });
+
+// export const myProfile = TryCatch(async (req, res) => {
+//   const user = await User.findById(req.user._id);
+
+//   res.json(user);
+// });
+
+
 import { User } from "../models/User.js";
 import TryCatch from "../utils/TryCatch.js";
+import { OTP } from "../models/Otp.js";
 import sendOtp from "../utils/sendOtp.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-export const loginUser = TryCatch(async (req, res) => {
-  const { email } = req.body;
+/* =========================
+   REGISTER USER
+========================= */
+export const registerUser = TryCatch(async (req, res) => {
+  const { name, email, password } = req.body;
 
-  const subject = "Ecommerce App";
-
-  const otp = Math.floor(Math.random() * 1000000);
-
-  const prevOtp = await OTP.findOne({
-    email,
-  });
-
-  if (prevOtp) {
-    await prevOtp.deleteOne();
+  if (!name || !email || !password) {
+    return res.status(400).json({
+      message: "All fields are required",
+    });
   }
 
-  await sendOtp({ email, subject, otp });
+  const existingUser = await User.findOne({ email });
 
-  await OTP.create({ email, otp });
+  if (existingUser) {
+    return res.status(400).json({
+      message: "Email already exists",
+    });
+  }
 
-  res.json({
-    message: "Otp send to your mail",
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const user = await User.create({
+    name,
+    email,
+    password: hashedPassword,
+  });
+
+  const token = jwt.sign(
+    { _id: user._id },
+    process.env.JWT_SEC,
+    { expiresIn: "15d" }
+  );
+
+  res.status(201).json({
+    message: "Account created successfully",
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
   });
 });
 
-export const verifyUser = TryCatch(async (req, res) => {
-  const { email, otp } = req.body;
+/* =========================
+   LOGIN USER
+========================= */
+export const loginUser = TryCatch(async (req, res) => {
+  const { email, password } = req.body;
 
-  const haveOtp = await OTP.findOne({
+  if (!email || !password) {
+    return res.status(400).json({
+      message: "All fields are required",
+    });
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json({
+      message: "Invalid email or password",
+    });
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
+    return res.status(400).json({
+      message: "Invalid email or password",
+    });
+  }
+
+  const token = jwt.sign(
+    { _id: user._id },
+    process.env.JWT_SEC,
+    { expiresIn: "15d" }
+  );
+
+  res.json({
+    message: "Login successful",
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  });
+});
+
+/* =========================
+   GET LOGGED USER
+========================= */
+export const myProfile = TryCatch(async (req, res) => {
+  const user = await User.findById(req.user._id).select(
+    "name email role wishlist"
+  );
+
+  res.json(user);
+});
+
+export const forgotPassword = TryCatch(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return res.status(400).json({
+      message: "User not found",
+    });
+  }
+
+  const otp = Math.floor(100000 + Math.random() * 900000);
+
+  await OTP.deleteMany({ email });
+
+  await OTP.create({
     email,
     otp,
   });
 
-  if (!haveOtp)
-    return res.status(400).json({
-      message: "Wrong otp",
-    });
+  await sendOtp({
+    email,
+    subject: "Password Reset OTP",
+    otp,
+  });
 
-  let user = await User.findOne({ email });
-
-  if (user) {
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
-      expiresIn: "15d",
-    });
-
-    await haveOtp.deleteOne();
-
-    res.json({
-      message: "User LoggedIn",
-      token,
-      user,
-    });
-  } else {
-    user = await User.create({
-      email,
-    });
-
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
-      expiresIn: "15d",
-    });
-
-    await haveOtp.deleteOne();
-
-    res.json({
-      message: "User LoggedIn",
-      token,
-      user,
-    });
-  }
+  res.json({
+    message: "OTP sent to email",
+  });
 });
 
-export const myProfile = TryCatch(async (req, res) => {
+export const resetPassword = TryCatch(async (req, res) => {
+  const { email, otp, password } = req.body;
+
+  const validOtp = await OTP.findOne({ email, otp });
+
+  if (!validOtp) {
+    return res.status(400).json({
+      message: "Invalid OTP",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await User.findOneAndUpdate(
+    { email },
+    { password: hashedPassword }
+  );
+
+  await validOtp.deleteOne();
+
+  res.json({
+    message: "Password reset successful",
+  });
+});
+
+/* =========================
+   UPDATE USER PROFILE
+========================= */
+export const updateProfile = TryCatch(async (req, res) => {
+  const { name, email, currentPassword, newPassword } = req.body;
+
   const user = await User.findById(req.user._id);
 
-  res.json(user);
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  // Update name
+  if (name) {
+    user.name = name;
+  }
+
+  // Update email
+  if (email && email !== user.email) {
+    const existingUser = await User.findOne({
+      email,
+      _id: { $ne: user._id },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Email already exists",
+      });
+    }
+
+    user.email = email;
+  }
+
+  // Update password
+  if (newPassword) {
+    if (!currentPassword) {
+      return res.status(400).json({
+        message: "Current password is required",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(
+      currentPassword,
+      user.password
+    );
+
+    if (!isMatch) {
+      return res.status(400).json({
+        message: "Current password is incorrect",
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        message: "New password must be at least 6 characters",
+      });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+  }
+
+  await user.save();
+
+  res.json({
+    message: "Profile updated successfully",
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  });
 });

@@ -93,20 +93,43 @@ export const updateCart = TryCatch(async (req, res) => {
   }
 });
 
+// export const fetchCart = TryCatch(async (req, res) => {
+//   const cart = await Cart.find({ user: req.user._id }).populate("product");
+
+//   const sumofQuantities = cart.reduce(
+//     (total, item) => total + item.quauntity,
+//     0
+//   );
+
+//   let subTotal = 0;
+
+//   cart.forEach((i) => {
+//     const itemSubTotal = i.product.price * i.quauntity;
+//     subTotal += itemSubTotal;
+//   });
+
+//   res.json({ cart, subTotal, sumofQuantities });
+// });
+
 export const fetchCart = TryCatch(async (req, res) => {
   const cart = await Cart.find({ user: req.user._id }).populate("product");
 
-  const sumofQuantities = cart.reduce(
-    (total, item) => total + item.quauntity,
+  const filteredCart = cart.filter((i) => i.product !== null);
+
+  const sumofQuantities = filteredCart.reduce(
+    (total, item) => total + (item.quauntity || 0),
     0
   );
 
   let subTotal = 0;
 
-  cart.forEach((i) => {
-    const itemSubTotal = i.product.price * i.quauntity;
-    subTotal += itemSubTotal;
+  filteredCart.forEach((i) => {
+    subTotal += (i.product.price || 0) * (i.quauntity || 0);
   });
 
-  res.json({ cart, subTotal, sumofQuantities });
+  res.json({
+    cart: filteredCart,
+    subTotal,
+    sumofQuantities,
+  });
 });
