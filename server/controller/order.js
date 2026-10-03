@@ -150,10 +150,16 @@ export const getStats = TryCatch(async (req, res) => {
 
   const products = await Product.find();
 
+  // const data = products.map((prod) => ({
+  //   name: prod.title,
+  //   sold: prod.sold,
+  // }));
+
   const data = products.map((prod) => ({
-    name: prod.title,
-    sold: prod.sold,
-  }));
+  name: prod.title,
+  sold: prod.sold || 0,
+  remaining: prod.stock || 0,
+}));
 
   res.json({
     cod,

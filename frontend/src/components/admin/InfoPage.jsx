@@ -10,11 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "../ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "../ui/chart";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "../ui/chart";
 import {
   Bar,
   BarChart,
@@ -81,14 +77,11 @@ const InfoPage = () => {
 
   const paymentPercentage = paymentData.map((data) => ({
     ...data,
-    percentage: parseFloat(
-      ((data.users / (cod + online)) * 100).toFixed(2)
-    ),
+    percentage: parseFloat(((data.users / (cod + online)) * 100).toFixed(2)),
   }));
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
       {/* ================= PAYMENT METHOD ================= */}
       <Card
         className="
@@ -100,9 +93,7 @@ const InfoPage = () => {
         "
       >
         <CardHeader className="items-center pb-0">
-          <CardTitle className="text-gray-100">
-            Payment Methods
-          </CardTitle>
+          <CardTitle className="text-gray-100">Payment Methods</CardTitle>
 
           <CardDescription className="text-gray-400">
             Payment Breakdown
@@ -140,11 +131,7 @@ const InfoPage = () => {
               >
                 <Label
                   content={({ viewBox }) => {
-                    if (
-                      viewBox &&
-                      "cx" in viewBox &&
-                      "cy" in viewBox
-                    ) {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                       return (
                         <text
                           x={viewBox.cx}
@@ -187,9 +174,7 @@ const InfoPage = () => {
         "
       >
         <CardHeader className="items-center pb-0">
-          <CardTitle className="text-gray-100">
-            Payment Percentage
-          </CardTitle>
+          <CardTitle className="text-gray-100">Payment Percentage</CardTitle>
 
           <CardDescription className="text-gray-400">
             Payment Breakdown
@@ -227,11 +212,7 @@ const InfoPage = () => {
               >
                 <Label
                   content={({ viewBox }) => {
-                    if (
-                      viewBox &&
-                      "cx" in viewBox &&
-                      "cy" in viewBox
-                    ) {
+                    if (viewBox && "cx" in viewBox && "cy" in viewBox) {
                       return (
                         <text
                           x={viewBox.cx}
@@ -274,9 +255,7 @@ const InfoPage = () => {
         "
       >
         <CardHeader>
-          <CardTitle className="text-gray-100">
-            Products Sold
-          </CardTitle>
+          <CardTitle className="text-gray-100">Products Sold</CardTitle>
 
           <CardDescription className="text-gray-400">
             Units Sold for each product
@@ -297,14 +276,11 @@ const InfoPage = () => {
               }}
             >
               {/* Grid */}
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#303238"
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="#303238" />
 
               {/* X AXIS */}
               <XAxis
-                dataKey="sold"
+                dataKey="name"
                 tickLine={false}
                 tickMargin={10}
                 axisLine={{
@@ -348,9 +324,7 @@ const InfoPage = () => {
                           text-gray-100
                         "
                       >
-                        <p className="font-semibold text-white">
-                          {name}
-                        </p>
+                        <p className="font-semibold text-white">{name}</p>
 
                         <p className="text-gray-400 text-sm mt-1">
                           Sold:{" "}
@@ -367,11 +341,7 @@ const InfoPage = () => {
               />
 
               {/* BAR */}
-              <Bar
-                dataKey="sold"
-                fill="#3b82f6"
-                radius={[8, 8, 0, 0]}
-              />
+              <Bar dataKey="sold" fill="#3b82f6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </div>
         </CardContent>
@@ -379,6 +349,144 @@ const InfoPage = () => {
         <CardFooter className="flex-col gap-2 text-sm">
           <div className="leading-none text-gray-400">
             Hover over a bar to see the product details
+          </div>
+        </CardFooter>
+      </Card>
+
+      {/* ================= INVENTORY STATUS ================= */}
+      <Card
+        className="
+    lg:col-span-2
+    bg-[#17181c]
+    border-gray-800
+    text-gray-100
+    shadow-lg shadow-black/20
+  "
+      >
+        <CardHeader>
+          <CardTitle className="text-gray-100">Inventory Status</CardTitle>
+
+          <CardDescription className="text-gray-400">
+            Sold and remaining stock for each product
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="overflow-x-auto">
+          <div className="w-full min-w-[700px] flex justify-center">
+            <BarChart
+              width={750}
+              height={400}
+              data={data}
+              margin={{
+                top: 20,
+                right: 30,
+                left: 20,
+                bottom: 50,
+              }}
+            >
+              {/* GRID */}
+              <CartesianGrid strokeDasharray="3 3" stroke="#303238" />
+
+              {/* X AXIS */}
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={{
+                  stroke: "#4b4f58",
+                }}
+                tick={{
+                  fill: "#9ca3af",
+                  fontSize: 12,
+                }}
+              />
+
+              {/* Y AXIS */}
+              <YAxis
+                tickLine={false}
+                axisLine={{
+                  stroke: "#4b4f58",
+                }}
+                tick={{
+                  fill: "#9ca3af",
+                  fontSize: 12,
+                }}
+              />
+
+              {/* TOOLTIP */}
+              <Tooltip
+                cursor={{
+                  fill: "rgba(255,255,255,0.05)",
+                }}
+                content={({ payload }) => {
+                  if (payload && payload.length) {
+                    const product = payload[0].payload;
+
+                    return (
+                      <div
+                        className="
+                    bg-[#1d1f24]
+                    border border-gray-700
+                    rounded-lg
+                    px-4 py-3
+                    shadow-xl
+                    text-gray-100
+                  "
+                      >
+                        <p className="font-semibold text-white mb-2">
+                          {product.name}
+                        </p>
+
+                        <p className="text-gray-400 text-sm">
+                          Sold:{" "}
+                          <span className="text-blue-400 font-semibold">
+                            {product.sold}
+                          </span>
+                        </p>
+
+                        <p className="text-gray-400 text-sm mt-1">
+                          Remaining:{" "}
+                          <span className="text-green-400 font-semibold">
+                            {product.remaining}
+                          </span>
+                        </p>
+
+                        <p className="text-gray-400 text-sm mt-1">
+                          Total:{" "}
+                          <span className="text-white font-semibold">
+                            {product.sold + product.remaining}
+                          </span>
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return null;
+                }}
+              />
+
+              {/* SOLD */}
+              <Bar
+                dataKey="sold"
+                name="Sold"
+                fill="#3b82f6"
+                radius={[6, 6, 0, 0]}
+              />
+
+              {/* REMAINING */}
+              <Bar
+                dataKey="remaining"
+                name="Remaining"
+                fill="#22c55e"
+                radius={[6, 6, 0, 0]}
+              />
+            </BarChart>
+          </div>
+        </CardContent>
+
+        <CardFooter className="flex-col gap-2 text-sm">
+          <div className="leading-none text-gray-400">
+            Compare sold units with the remaining inventory
           </div>
         </CardFooter>
       </Card>
