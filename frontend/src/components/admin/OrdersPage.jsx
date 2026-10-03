@@ -51,7 +51,7 @@ const OrdersPage = () => {
           headers: {
             token: Cookies.get("token"),
           },
-        }
+        },
       );
 
       toast.success(data.message);
@@ -106,9 +106,7 @@ const OrdersPage = () => {
               {filteredOrders.map((order) => (
                 <TableRow key={order._id}>
                   <TableCell>
-                    <Link to={`/order/${order._id}`}>
-                      {order._id}
-                    </Link>
+                    <Link to={`/order/${order._id}`}>{order._id}</Link>
                   </TableCell>
 
                   {/* ✅ NEW: Name + Email */}
@@ -131,8 +129,8 @@ const OrdersPage = () => {
                         order.status === "Pending"
                           ? "bg-yellow-500"
                           : order.status === "Shipped"
-                          ? "bg-blue-500"
-                          : "bg-green-500"
+                            ? "bg-blue-500"
+                            : "bg-green-500"
                       }`}
                     >
                       {order.status}
@@ -144,7 +142,7 @@ const OrdersPage = () => {
                   </TableCell>
 
                   <TableCell>
-                    <select
+                    {/* <select
                       value={order.status}
                       className="w-[150px] px-3 py-2 border rounded-md"
                       onChange={(e) =>
@@ -154,7 +152,53 @@ const OrdersPage = () => {
                       <option className="text-black" value="Pending">Pending</option>
                       <option className="text-black" value="Shipped">Shipped</option>
                       <option className="text-black" value="Delivered">Delivered</option>
-                    </select>
+                    </select> */}
+                    {order.status === "Delivered" ||
+                    order.status === "Cancelled" ? (
+                      <span className="text-sm text-muted-foreground">
+                        No further changes
+                      </span>
+                    ) : (
+                      <select
+                        value={order.status}
+                        className="w-[150px] px-3 py-2 border rounded-md"
+                        onChange={(e) =>
+                          updateOrderStatus(order._id, e.target.value)
+                        }
+                      >
+                        {order.status === "Pending" && (
+                          <>
+                            <option className="text-black" value="Pending">
+                              Pending
+                            </option>
+
+                            <option className="text-black" value="Shipped">
+                              Shipped
+                            </option>
+
+                            <option className="text-black" value="Cancelled">
+                              Cancelled
+                            </option>
+                          </>
+                        )}
+
+                        {order.status === "Shipped" && (
+                          <>
+                            <option className="text-black" value="Shipped">
+                              Shipped
+                            </option>
+
+                            <option className="text-black" value="Delivered">
+                              Delivered
+                            </option>
+
+                            <option className="text-black" value="Cancelled">
+                              Cancelled
+                            </option>
+                          </>
+                        )}
+                      </select>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

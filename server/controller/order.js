@@ -118,6 +118,27 @@ export const getMyOrder = TryCatch(async (req, res) => {
   res.json(order);
 });
 
+// export const updateStatus = TryCatch(async (req, res) => {
+//   if (req.user.role !== "admin") {
+//     return res.status(403).json({
+//       message: "you are not admin",
+//     });
+//   }
+
+//   const order = await Order.findById(req.params.id);
+
+//   const { status } = req.body;
+
+//   order.status = status;
+
+//   await order.save();
+
+//   res.json({
+//     message: "order status updated",
+//     order,
+//   });
+// });
+
 export const updateStatus = TryCatch(async (req, res) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({
@@ -125,13 +146,75 @@ export const updateStatus = TryCatch(async (req, res) => {
     });
   }
 
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id).populate("user");
+
+  if (!order) {
+    return res.status(404).json({
+      message: "Order not found",
+    });
+  }
 
   const { status } = req.body;
+
+  const statusOrder = {
+    Pending: 1,
+    Paid: 2,
+    Processing: 3,
+    Shipped: 4,
+    Delivered: 5,
+  };
+
+  const currentStatus = order.status;
+
+  // Same status
+  if (currentStatus === status) {
+    return res.json({
+      message: "Order status is already " + status,
+      order,
+    });
+  }
+
+  // Prevent moving backwards
+  if (
+    status !== "Cancelled" &&
+    statusOrder[status] < statusOrder[currentStatus]
+  ) {
+    return res.status(400).json({
+      message: `Cannot change order status from ${currentStatus} back to ${status}`,
+    });
+  }
+
+  // Delivered orders cannot be changed
+  if (currentStatus === "Delivered") {
+    return res.status(400).json({
+      message: "Delivered orders cannot be changed",
+    });
+  }
+
+  // Cancelled orders cannot be changed
+  if (currentStatus === "Cancelled") {
+    return res.status(400).json({
+      message: "Cancelled orders cannot be changed",
+    });
+  }
 
   order.status = status;
 
   await order.save();
+
+  await sendOrderConfirmation({
+    email: order.user.email,
+    subject: `Order Status Updated - ${status}`,
+    orderId: order._id,
+    products: order.items,
+    totalAmount: order.subTotal,
+    status: order.status,
+    paymentMethod:
+      order.method === "online"
+        ? "eSewa"
+        : "Cash on Delivery",
+    emailType: "statusUpdate",
+  });
 
   res.json({
     message: "order status updated",
