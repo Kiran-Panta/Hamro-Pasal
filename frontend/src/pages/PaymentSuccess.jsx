@@ -21,31 +21,42 @@ const PaymentSuccess = () => {
         const encodedData =
           searchParams.get("data");
 
+        console.log(
+          "========== ESEWA SUCCESS =========="
+        );
+
+        console.log(
+          "Encoded data:",
+          encodedData
+        );
+
         if (!encodedData) {
-          toast.error(
+          throw new Error(
             "Payment information not found"
           );
-
-          navigate("/orders");
-          return;
         }
 
         /*
-         * eSewa sends the response as Base64.
+         * Decode eSewa Base64 response
          */
-        const decodedString = atob(encodedData);
+        const decodedString =
+          atob(encodedData);
+
+        console.log(
+          "Decoded string:",
+          decodedString
+        );
 
         const decodedData =
           JSON.parse(decodedString);
 
         console.log(
-          "eSewa response:",
+          "Decoded eSewa response:",
           decodedData
         );
 
         /*
-         * Basic validation before sending
-         * anything to our backend.
+         * Validate required fields
          */
         if (
           !decodedData.transaction_uuid ||
@@ -58,10 +69,10 @@ const PaymentSuccess = () => {
         }
 
         /*
-         * Send the response to our backend.
+         * Send eSewa response to backend.
          *
-         * Backend performs the actual security
-         * verification.
+         * Backend performs the actual
+         * payment verification.
          */
         const { data } = await axios.post(
           `${server}/api/order/verify/esewa`,
@@ -73,23 +84,45 @@ const PaymentSuccess = () => {
           }
         );
 
-        if (data.success) {
-          toast.success(
-            "Payment successful!"
-          );
+        console.log(
+          "Backend verification response:",
+          data
+        );
 
-          navigate("/orders");
-          return;
+        if (!data.success) {
+          throw new Error(
+            data.message ||
+              "Payment verification failed"
+          );
         }
 
-        throw new Error(
-          data.message ||
-            "Payment verification failed"
+        /*
+         * Payment verified successfully.
+         *
+         * Backend has already:
+         *
+         * 1. Marked order as Paid
+         * 2. Reduced stock
+         * 3. Cleared cart
+         * 4. Sent confirmation email
+         */
+
+        toast.success(
+          "Payment successful!"
         );
+
+        navigate("/orders");
+
       } catch (error) {
         console.error(
-          "Payment verification error:",
-          error
+          "========== ESEWA VERIFICATION ERROR =========="
+        );
+
+        console.error(error);
+
+        console.error(
+          "Backend response:",
+          error.response?.data
         );
 
         toast.error(
@@ -99,12 +132,14 @@ const PaymentSuccess = () => {
         );
 
         navigate("/orders");
+
       } finally {
         setLoading(false);
       }
     };
 
     verifyPayment();
+
   }, [navigate, searchParams]);
 
   if (loading) {

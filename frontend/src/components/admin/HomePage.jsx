@@ -26,8 +26,23 @@ import { useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 
 const HomePage = () => {
-  const { products, page, setPage, fetchProducts, loading, totalPages } =
-    ProductData();
+  // const { products, page, setPage, fetchProducts, loading, totalPages } =
+  //   ProductData();
+
+  const {
+    products,
+    page,
+    setPage,
+    fetchProducts,
+    loading,
+    totalPages,
+    totalProducts,
+    totalInStock,
+    totalOutOfStock,
+    category,
+    setCategory,
+    categories: productCategories,
+  } = ProductData();
 
   const location = useLocation();
 
@@ -151,25 +166,41 @@ const HomePage = () => {
         <Button onClick={() => setOpen(true)}>Add Product</Button>
       </div>
 
+      {/* CATEGORY FILTER */}
+      <div className="mb-6">
+        <select
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setPage(1);
+          }}
+          className="w-full sm:w-64 p-2 border rounded-md bg-background"
+        >
+          <option className="text-black" value="">All Categories</option>
+
+          {productCategories.map((c) => (
+            <option className="text-black font-semibold" key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* STATS */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="p-4 border rounded-xl">
           <p>Total</p>
-          <h3 className="text-2xl font-bold">{products.length}</h3>
+          <h3 className="text-2xl font-bold">{totalProducts}</h3>
         </div>
 
         <div className="p-4 border rounded-xl">
           <p className="text-green-600">In Stock</p>
-          <h3 className="text-2xl font-bold">
-            {products.filter((p) => p.stock > 0).length}
-          </h3>
+          <h3 className="text-2xl font-bold">{totalInStock}</h3>
         </div>
 
         <div className="p-4 border rounded-xl">
           <p className="text-red-600">Out of Stock</p>
-          <h3 className="text-2xl font-bold">
-            {products.filter((p) => p.stock <= 0).length}
-          </h3>
+          <h3 className="text-2xl font-bold">{totalOutOfStock}</h3>
         </div>
       </div>
 
@@ -177,7 +208,7 @@ const HomePage = () => {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger />
 
-        <DialogContent className="sm:max-w-[600px] rounded-2xl">
+        <DialogContent className="sm:max-w-[600px] bg-white text-black rounded-2xl font-semibold">
           <DialogHeader>
             <DialogTitle>Add New Product</DialogTitle>
           </DialogHeader>
@@ -203,11 +234,11 @@ const HomePage = () => {
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full p-2 text-white border rounded-md"
+              className="w-full p-2 text-black border rounded-md"
             >
               <option value="">Select Category</option>
               {categories.map((c) => (
-                <option className="text-black" key={c} value={c}>
+                <option className="text-black font-semibold" key={c} value={c}>
                   {c}
                 </option>
               ))}

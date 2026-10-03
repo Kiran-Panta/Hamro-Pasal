@@ -7,9 +7,7 @@ import TryCatch from "../utils/TryCatch.js";
 import bufferGenerator from "../utils/bufferGenerator.js";
 import cloudinary from "cloudinary";
 
-import {
-  calculateRecommendationScore,
-} from "../utils/recommendation.js";
+import { calculateRecommendationScore } from "../utils/recommendation.js";
 
 export const createProduct = TryCatch(async (req, res) => {
   if (req.user.role !== "admin")
@@ -54,7 +52,6 @@ export const createProduct = TryCatch(async (req, res) => {
   });
 });
 
-
 export const getAllProducts = TryCatch(async (req, res) => {
   const { search, category, page, sortByPrice } = req.query;
 
@@ -92,11 +89,19 @@ export const getAllProducts = TryCatch(async (req, res) => {
     .limit(limit)
     .skip(skip);
 
+  const totalInStock = await Product.countDocuments({
+    ...filter,
+    stock: { $gt: 0 },
+  });
+
+  const totalOutOfStock = await Product.countDocuments({
+    ...filter,
+    stock: { $lte: 0 },
+  });
+
   const categories = await Product.distinct("category");
 
-  const newProduct = await Product.find()
-    .sort("-createdAt")
-    .limit(4);
+  const newProduct = await Product.find().sort("-createdAt").limit(4);
 
   // Count only products matching the current filter
   const countProduct = await Product.countDocuments(filter);
@@ -107,6 +112,9 @@ export const getAllProducts = TryCatch(async (req, res) => {
     products,
     categories,
     totalPages,
+    totalProducts: countProduct,
+    totalInStock,
+    totalOutOfStock,
     newProduct,
   });
 });
@@ -146,12 +154,39 @@ export const updateProduct = TryCatch(async (req, res) => {
     return res.status(404).json({ message: "Product not found" });
   }
 
+  // const { title, about, price, stock, category } = req.body;
+
+  // product.title = title || product.title;
+  // product.about = about || product.about;
+  // product.price = price || product.price;
+  // product.stock = stock || product.stock;
+  // product.category = category || product.category;
+
   const { title, about, price, stock, category } = req.body;
+
+  if (stock !== undefined && Number(stock) < 0) {
+    return res.status(400).json({
+      message: "Stock cannot be negative",
+    });
+  }
+
+  if (price !== undefined && Number(price) < 0) {
+    return res.status(400).json({
+      message: "Price cannot be negative",
+    });
+  }
 
   product.title = title || product.title;
   product.about = about || product.about;
-  product.price = price || product.price;
-  product.stock = stock || product.stock;
+
+  if (price !== undefined) {
+    product.price = Number(price);
+  }
+
+  if (stock !== undefined) {
+    product.stock = Number(stock);
+  }
+
   product.category = category || product.category;
 
   // ✅ FIXED IMAGE UPLOAD (USING BUFFER GENERATOR LIKE CREATE PRODUCT)
@@ -161,9 +196,7 @@ export const updateProduct = TryCatch(async (req, res) => {
     for (let file of req.files) {
       const fileBuffer = bufferGenerator(file);
 
-      const result = await cloudinary.v2.uploader.upload(
-        fileBuffer.content
-      );
+      const result = await cloudinary.v2.uploader.upload(fileBuffer.content);
 
       uploadedImages.push({
         id: result.public_id,
@@ -263,285 +296,249 @@ export const deleteProduct = TryCatch(async (req, res) => {
   });
 });
 
-export const getPersonalizedRecommendations = TryCatch(
-  async (req, res) => {
-    const userId = req.user._id;
+export const getPersonalizedRecommendations = TryCatch(async (req, res) => {
+  const userId = req.user._id;
 
-    // --------------------------------
-    // 1. Get user wishlist
-    // --------------------------------
+  // --------------------------------
+  // 1. Get user wishlist
+  // --------------------------------
 
-    const user = await User.findById(userId)
-      .select("wishlist")
-      .lean();
+  const user = await User.findById(userId).select("wishlist").lean();
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found",
-      });
-    }
-
-    // --------------------------------
-    // 2. Get cart products
-    // --------------------------------
-
-    const cartItems = await Cart.find({
-      user: userId,
-    })
-      .populate("product")
-      .lean();
-
-    // --------------------------------
-    // 3. Get purchased products
-    // --------------------------------
-
-    const orders = await Order.find({
-      user: userId,
-    })
-      .populate("items.product")
-      .lean();
-
-    // --------------------------------
-    // 4. Get wishlist products
-    // --------------------------------
-
-    const wishlistProducts = await Product.find({
-      _id: {
-        $in: user.wishlist || [],
-      },
-    }).lean();
-
-    // --------------------------------
-    // 5. Get all available products
-    // --------------------------------
-
-    const products = await Product.find({
-      stock: { $gt: 0 },
-    }).lean();
-
-    // --------------------------------
-    // 6. Extract purchased products
-    // --------------------------------
-
-    const purchasedProducts = [];
-
-    orders.forEach((order) => {
-      order.items?.forEach((item) => {
-        if (item.product) {
-          purchasedProducts.push(item.product);
-        }
-      });
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
     });
+  }
 
-    // --------------------------------
-    // 7. Extract cart products
-    // --------------------------------
+  // --------------------------------
+  // 2. Get cart products
+  // --------------------------------
 
-    const cartProducts = cartItems
-      .filter((item) => item.product)
-      .map((item) => item.product);
+  const cartItems = await Cart.find({
+    user: userId,
+  })
+    .populate("product")
+    .lean();
 
-    // --------------------------------
-    // 8. Combine user interactions
-    // --------------------------------
+  // --------------------------------
+  // 3. Get purchased products
+  // --------------------------------
 
-    const interactedProducts = [
-      ...purchasedProducts,
-      ...cartProducts,
-      ...wishlistProducts,
-    ];
+  const orders = await Order.find({
+    user: userId,
+  })
+    .populate("items.product")
+    .lean();
 
-    // --------------------------------
-    // 9. NEW USER FALLBACK
-    // --------------------------------
+  // --------------------------------
+  // 4. Get wishlist products
+  // --------------------------------
 
-    if (interactedProducts.length === 0) {
-      const popularProducts = [...products]
-        .sort((a, b) => {
-          const scoreA =
-            (a.sold || 0) * 2 +
-            (a.rating || 0) * 10;
+  const wishlistProducts = await Product.find({
+    _id: {
+      $in: user.wishlist || [],
+    },
+  }).lean();
 
-          const scoreB =
-            (b.sold || 0) * 2 +
-            (b.rating || 0) * 10;
+  // --------------------------------
+  // 5. Get all available products
+  // --------------------------------
 
-          return scoreB - scoreA;
-        })
-        .slice(0, 6);
+  const products = await Product.find({
+    stock: { $gt: 0 },
+  }).lean();
 
-      return res.status(200).json({
-        recommendations: popularProducts,
-        type: "popular",
-      });
-    }
+  // --------------------------------
+  // 6. Extract purchased products
+  // --------------------------------
 
-    // --------------------------------
-    // 10. CATEGORY PREFERENCE
-    // --------------------------------
+  const purchasedProducts = [];
 
-    const categoryScores = {};
-
-    // Purchased = strongest signal
-    purchasedProducts.forEach((product) => {
-      if (!product.category) return;
-
-      categoryScores[product.category] =
-        (categoryScores[product.category] || 0) + 5;
+  orders.forEach((order) => {
+    order.items?.forEach((item) => {
+      if (item.product) {
+        purchasedProducts.push(item.product);
+      }
     });
+  });
 
-    // Cart = second strongest
-    cartProducts.forEach((product) => {
-      if (!product.category) return;
+  // --------------------------------
+  // 7. Extract cart products
+  // --------------------------------
 
-      categoryScores[product.category] =
-        (categoryScores[product.category] || 0) + 4;
+  const cartProducts = cartItems
+    .filter((item) => item.product)
+    .map((item) => item.product);
+
+  // --------------------------------
+  // 8. Combine user interactions
+  // --------------------------------
+
+  const interactedProducts = [
+    ...purchasedProducts,
+    ...cartProducts,
+    ...wishlistProducts,
+  ];
+
+  // --------------------------------
+  // 9. NEW USER FALLBACK
+  // --------------------------------
+
+  if (interactedProducts.length === 0) {
+    const popularProducts = [...products]
+      .sort((a, b) => {
+        const scoreA = (a.sold || 0) * 2 + (a.rating || 0) * 10;
+
+        const scoreB = (b.sold || 0) * 2 + (b.rating || 0) * 10;
+
+        return scoreB - scoreA;
+      })
+      .slice(0, 6);
+
+    return res.status(200).json({
+      recommendations: popularProducts,
+      type: "popular",
     });
+  }
 
-    // Wishlist = third strongest
-    wishlistProducts.forEach((product) => {
-      if (!product.category) return;
+  // --------------------------------
+  // 10. CATEGORY PREFERENCE
+  // --------------------------------
 
-      categoryScores[product.category] =
-        (categoryScores[product.category] || 0) + 3;
-    });
+  const categoryScores = {};
 
-    // --------------------------------
-    // 11. Sort preferred categories
-    // --------------------------------
+  // Purchased = strongest signal
+  purchasedProducts.forEach((product) => {
+    if (!product.category) return;
 
-    const preferredCategories = Object.entries(
-      categoryScores
-    )
-      .sort((a, b) => b[1] - a[1])
-      .map(([category]) => category);
+    categoryScores[product.category] =
+      (categoryScores[product.category] || 0) + 5;
+  });
 
-    // --------------------------------
-    // 12. Calculate average price
-    // --------------------------------
+  // Cart = second strongest
+  cartProducts.forEach((product) => {
+    if (!product.category) return;
 
-    const prices = interactedProducts
-      .map((product) => Number(product.price))
-      .filter((price) => price > 0);
+    categoryScores[product.category] =
+      (categoryScores[product.category] || 0) + 4;
+  });
 
-    const averagePrice =
-      prices.length > 0
-        ? prices.reduce(
-            (sum, price) => sum + price,
-            0
-          ) / prices.length
-        : 0;
+  // Wishlist = third strongest
+  wishlistProducts.forEach((product) => {
+    if (!product.category) return;
 
-    // --------------------------------
-    // 13. IDs of already interacted
-    // products
-    // --------------------------------
+    categoryScores[product.category] =
+      (categoryScores[product.category] || 0) + 3;
+  });
 
-    const interactedIds = new Set(
-      interactedProducts.map((product) =>
-        product._id.toString()
-      )
-    );
+  // --------------------------------
+  // 11. Sort preferred categories
+  // --------------------------------
 
-    console.log(
-  "INTERACTED PRODUCTS:",
-  interactedProducts.map((product) => ({
-    id: product._id.toString(),
-    title: product.title,
-  }))
-);
+  const preferredCategories = Object.entries(categoryScores)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category]) => category);
 
-console.log(
-  "AVAILABLE PRODUCTS:",
-  products.map((product) => ({
-    id: product._id.toString(),
-    title: product.title,
-    stock: product.stock,
-  }))
-);
+  // --------------------------------
+  // 12. Calculate average price
+  // --------------------------------
 
-console.log(
-  "REMAINING PRODUCTS:",
-  products
-    .filter(
-      (product) =>
-        !interactedIds.has(
-          product._id.toString()
-        )
-    )
-    .map((product) => product.title)
-);
+  const prices = interactedProducts
+    .map((product) => Number(product.price))
+    .filter((price) => price > 0);
 
-    // --------------------------------
-    // 14. Score candidate products
-    // --------------------------------
+  const averagePrice =
+    prices.length > 0
+      ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+      : 0;
+
+  // --------------------------------
+  // 13. IDs of already interacted
+  // products
+  // --------------------------------
+
+  const interactedIds = new Set(
+    interactedProducts.map((product) => product._id.toString()),
+  );
+
+  console.log(
+    "INTERACTED PRODUCTS:",
+    interactedProducts.map((product) => ({
+      id: product._id.toString(),
+      title: product.title,
+    })),
+  );
+
+  console.log(
+    "AVAILABLE PRODUCTS:",
+    products.map((product) => ({
+      id: product._id.toString(),
+      title: product.title,
+      stock: product.stock,
+    })),
+  );
+
+  console.log(
+    "REMAINING PRODUCTS:",
+    products
+      .filter((product) => !interactedIds.has(product._id.toString()))
+      .map((product) => product.title),
+  );
+
+  // --------------------------------
+  // 14. Score candidate products
+  // --------------------------------
   let recommendations = products
-  .filter(
-    (product) =>
-      !interactedIds.has(
-        product._id.toString()
-      )
-  )
-  .map((product) => {
-    const score =
-      calculateRecommendationScore(
+    .filter((product) => !interactedIds.has(product._id.toString()))
+    .map((product) => {
+      const score = calculateRecommendationScore(
         product,
         preferredCategories,
-        averagePrice
+        averagePrice,
       );
 
-    return {
-      ...product,
-      recommendationScore: score,
-    };
-  });
+      return {
+        ...product,
+        recommendationScore: score,
+      };
+    });
 
-// --------------------------------
-// 15. Sort personalized products
-// --------------------------------
+  // --------------------------------
+  // 15. Sort personalized products
+  // --------------------------------
 
-recommendations.sort(
-  (a, b) =>
-    b.recommendationScore -
-    a.recommendationScore
-);
+  recommendations.sort((a, b) => b.recommendationScore - a.recommendationScore);
 
-// --------------------------------
-// 16. If no unseen products,
-// use popular products
-// --------------------------------
+  // --------------------------------
+  // 16. If no unseen products,
+  // use popular products
+  // --------------------------------
 
-if (recommendations.length === 0) {
-  recommendations = [...products]
-    .sort((a, b) => {
-      const scoreA =
-        (a.sold || 0) * 2 +
-        (a.rating || 0) * 10;
+  if (recommendations.length === 0) {
+    recommendations = [...products]
+      .sort((a, b) => {
+        const scoreA = (a.sold || 0) * 2 + (a.rating || 0) * 10;
 
-      const scoreB =
-        (b.sold || 0) * 2 +
-        (b.rating || 0) * 10;
+        const scoreB = (b.sold || 0) * 2 + (b.rating || 0) * 10;
 
-      return scoreB - scoreA;
-    })
-    .slice(0, 6);
+        return scoreB - scoreA;
+      })
+      .slice(0, 6);
 
-  return res.status(200).json({
-    recommendations,
-    type: "popular-fallback",
-  });
-}
-
-// --------------------------------
-// 17. Return personalized products
-// --------------------------------
-
-res.status(200).json({
-  recommendations:
-    recommendations.slice(0, 6),
-
-  type: "personalized",
-});
-  
+    return res.status(200).json({
+      recommendations,
+      type: "popular-fallback",
+    });
   }
-);
+
+  // --------------------------------
+  // 17. Return personalized products
+  // --------------------------------
+
+  res.status(200).json({
+    recommendations: recommendations.slice(0, 6),
+
+    type: "personalized",
+  });
+});

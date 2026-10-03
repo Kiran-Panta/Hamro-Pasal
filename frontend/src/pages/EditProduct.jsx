@@ -28,12 +28,9 @@ const EditProduct = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const { data } = await axios.get(
-          `${server}/api/product/${id}`,
-          {
-            headers: { token: Cookies.get("token") },
-          }
-        );
+        const { data } = await axios.get(`${server}/api/product/${id}`, {
+          headers: { token: Cookies.get("token") },
+        });
 
         setForm({
           title: data.product.title,
@@ -51,8 +48,18 @@ const EditProduct = () => {
     fetchProduct();
   }, [id]);
 
+  // const handleChange = (e) => {
+  //   setForm({ ...form, [e.target.name]: e.target.value });
+  // };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "stock" && Number(value) < 0) {
+      return;
+    }
+
+    setForm({ ...form, [name]: value });
   };
 
   const handleFileChange = (e) => {
@@ -85,12 +92,12 @@ const EditProduct = () => {
             token: Cookies.get("token"),
             "Content-Type": "multipart/form-data",
           },
-        }
+        },
       );
 
       toast.success(data.message);
       // navigate("/admin");
-      setRefresh(prev => !prev);
+      setRefresh((prev) => !prev);
       // navigate("/admin", { state: { refresh: Date.now() } });
       navigate("/admin/dashboard");
     } catch (err) {
@@ -105,7 +112,6 @@ const EditProduct = () => {
       <h2 className="text-2xl font-bold">Edit Product</h2>
 
       <form onSubmit={submitHandler} className="space-y-4">
-
         <Input
           name="title"
           value={form.title}
@@ -124,11 +130,15 @@ const EditProduct = () => {
           name="category"
           value={form.category}
           onChange={handleChange}
-          className="w-full p-2 border rounded"
+          className="w-full text-white p-2 border rounded"
         >
-          <option value="">Select Category</option>
+          <option className="text-black" value="">
+            Select Category
+          </option>
           {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option className="text-black" key={c} value={c}>
+              {c}
+            </option>
           ))}
         </select>
 
@@ -143,16 +153,13 @@ const EditProduct = () => {
         <Input
           name="stock"
           type="number"
+          min="0"
           value={form.stock}
           onChange={handleChange}
           placeholder="Stock"
         />
 
-        <Input
-          type="file"
-          multiple
-          onChange={handleFileChange}
-        />
+        <Input type="file" multiple onChange={handleFileChange} />
 
         <Button disabled={loading} className="w-full">
           {loading ? "Updating..." : "Update Product"}

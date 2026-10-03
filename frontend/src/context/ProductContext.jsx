@@ -12,6 +12,9 @@ export const ProductProvider = ({ children }) => {
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalInStock, setTotalInStock] = useState(0);
+  const [totalOutOfStock, setTotalOutOfStock] = useState(0);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -36,6 +39,9 @@ export const ProductProvider = ({ children }) => {
       setNewProd(data.newProduct);
       setCategories(data.categories);
       setTotalPages(data.totalPages);
+      setTotalProducts(data.totalProducts);
+      setTotalInStock(data.totalInStock);
+      setTotalOutOfStock(data.totalOutOfStock);
 
       setLoading(false);
     } catch (error) {
@@ -134,6 +140,9 @@ export const ProductProvider = ({ children }) => {
         category,
         setCategory,
         totalPages,
+        totalProducts,
+        totalInStock,
+        totalOutOfStock,
         price,
         setPrice,
         page,
