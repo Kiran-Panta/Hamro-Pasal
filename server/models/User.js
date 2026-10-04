@@ -52,6 +52,11 @@ const userSchema = new mongoose.Schema(
       default: "user",
     },
 
+    isBlocked: {
+      type: Boolean,
+      default: false,
+    },
+
     wishlist: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -62,7 +67,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 export const User = mongoose.model("User", userSchema);

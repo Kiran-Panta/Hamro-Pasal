@@ -5,23 +5,39 @@
 //   try {
 //     const { token } = req.headers;
 
-//     if (!token)
+//     if (!token) {
 //       return res.status(403).json({
 //         message: "Please login",
 //       });
+//     }
 
-//     const decodedData = jwt.verify(token, process.env.JWT_SEC);
+//     const decoded = jwt.verify(token, process.env.JWT_SEC);
 
-//     req.user = await User.findById(decodedData._id);
+//     const user = await User.findById(decoded._id).select(
+//       "name email role isBlocked",
+//     );
+
+//     if (!user) {
+//       return res.status(404).json({
+//         message: "User not found",
+//       });
+//     }
+
+//     req.user = {
+//       _id: user._id,
+//       name: user.name,
+//       email: user.email,
+//       role: user.role,
+//       isBlocked: user.isBlocked,
+//     };
 
 //     next();
 //   } catch (error) {
-//     res.status(500).json({
-//       message: "Please login",
+//     return res.status(401).json({
+//       message: "Invalid or expired token, please login again",
 //     });
 //   }
 // };
-
 
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
@@ -38,11 +54,19 @@ export const isAuth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SEC);
 
-    const user = await User.findById(decoded._id).select("name email role");
+    const user = await User.findById(decoded._id).select(
+      "name email role isBlocked"
+    );
 
     if (!user) {
       return res.status(404).json({
         message: "User not found",
+      });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({
+        message: "Your account has been blocked by the administrator",
       });
     }
 
@@ -51,6 +75,7 @@ export const isAuth = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      isBlocked: user.isBlocked,
     };
 
     next();
@@ -60,3 +85,5 @@ export const isAuth = async (req, res, next) => {
     });
   }
 };
+
+

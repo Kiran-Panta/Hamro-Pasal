@@ -40,6 +40,9 @@ import {
   forgotPassword,
   resetPassword,
   updateProfile,
+  getAllUsers,
+  blockUser,
+  unblockUser,
 } from "../controller/user.js";
 
 import { isAuth } from "../middlewares/isAuth.js";
@@ -54,5 +57,10 @@ router.post("/user/reset-password", resetPassword);
 
 router.get("/user/me", isAuth, myProfile);
 router.put("/user/update-profile", isAuth, updateProfile);
+
+// ADMIN USER MANAGEMENT
+router.get("/user/admin/all", isAuth, getAllUsers);
+router.put("/user/admin/:id/block", isAuth, blockUser);
+router.put("/user/admin/:id/unblock", isAuth, unblockUser);
 
 export default router;

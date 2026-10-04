@@ -11,9 +11,11 @@ import {
   ShoppingBag,
   MessageSquare,
   X,
+  Users,
 } from "lucide-react";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import UsersPage from "@/components/admin/UserPage";
 
 const AdminDashboard = () => {
   const [selectedPage, setSelectedPage] = useState("home");
@@ -38,6 +40,9 @@ const AdminDashboard = () => {
 
       case "contact":
         return <ContactMessage />;
+
+      case "users":
+        return <UsersPage />;
 
       default:
         return <HomePage />;
@@ -92,6 +97,18 @@ const AdminDashboard = () => {
               Info
             </Button>
 
+            {/* Users */}
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedPage("users")}
+              className={`w-full flex items-center gap-2 ${
+                selectedPage === "users" ? "bg-gray-500" : ""
+              }`}
+            >
+              <Users className="w-5 h-5" />
+              Users
+            </Button>
+
             {/* Contact Messages */}
             <Button
               variant="ghost"
@@ -128,9 +145,7 @@ const AdminDashboard = () => {
             <MenuIcon className="w-5 h-5" />
           </Button>
 
-          <h2 className="text-lg font-bold hidden lg:block">
-            Admin Dashboard
-          </h2>
+          <h2 className="text-lg font-bold hidden lg:block">Admin Dashboard</h2>
         </div>
 
         <div className="p-4">{renderPageContent()}</div>

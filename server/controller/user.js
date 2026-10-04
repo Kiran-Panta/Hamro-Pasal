@@ -68,12 +68,19 @@ export const loginUser = TryCatch(async (req, res) => {
   }
 
   const user = await User.findOne({ email });
+  
 
   if (!user) {
     return res.status(400).json({
       message: "Invalid email or password",
     });
   }
+
+  if (user.isBlocked) {
+  return res.status(403).json({
+    message: "Your account has been blocked by the administrator",
+  });
+}
 
   const isMatch = await bcrypt.compare(password, user.password);
 
@@ -103,9 +110,13 @@ export const loginUser = TryCatch(async (req, res) => {
    GET LOGGED USER
 ========================= */
 export const myProfile = TryCatch(async (req, res) => {
+  // const user = await User.findById(req.user._id).select(
+  //   "name email role wishlist",
+  // );
+
   const user = await User.findById(req.user._id).select(
-    "name email role wishlist",
-  );
+  "name email role wishlist isBlocked"
+);
 
   res.json(user);
 });
@@ -140,34 +151,6 @@ export const forgotPassword = TryCatch(async (req, res) => {
     message: "OTP sent to email",
   });
 });
-
-// export const resetPassword = TryCatch(async (req, res) => {
-//   const { email, otp, password } = req.body;
-
-//   if (!password || password.length < 8) {
-//   return res.status(400).json({
-//     message: "Password must be at least 8 characters",
-//   });
-// }
-
-//   const validOtp = await OTP.findOne({ email, otp });
-
-//   if (!validOtp) {
-//     return res.status(400).json({
-//       message: "Invalid OTP",
-//     });
-//   }
-
-//   const hashedPassword = await bcrypt.hash(password, 10);
-
-//   await User.findOneAndUpdate({ email }, { password: hashedPassword });
-
-//   await validOtp.deleteOne();
-
-//   res.json({
-//     message: "Password reset successful",
-//   });
-// });
 
 export const resetPassword = TryCatch(async (req, res) => {
   const { email, otp, password } = req.body;
@@ -276,6 +259,97 @@ export const updateProfile = TryCatch(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+    },
+  });
+});
+
+/* =========================
+   GET ALL USERS - ADMIN
+========================= */
+export const getAllUsers = TryCatch(async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "You are not admin",
+    });
+  }
+
+  const users = await User.find()
+    .select("-password")
+    .sort({ createdAt: -1 });
+
+  res.json(users);
+});
+
+/* =========================
+   BLOCK USER - ADMIN
+========================= */
+export const blockUser = TryCatch(async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "You are not admin",
+    });
+  }
+
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  if (user.role === "admin") {
+    return res.status(400).json({
+      message: "Admin account cannot be blocked",
+    });
+  }
+
+  user.isBlocked = true;
+
+  await user.save();
+
+  res.json({
+    message: "User blocked successfully",
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isBlocked: user.isBlocked,
+    },
+  });
+});
+
+/* =========================
+   UNBLOCK USER - ADMIN
+========================= */
+export const unblockUser = TryCatch(async (req, res) => {
+  if (req.user.role !== "admin") {
+    return res.status(403).json({
+      message: "You are not admin",
+    });
+  }
+
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return res.status(404).json({
+      message: "User not found",
+    });
+  }
+
+  user.isBlocked = false;
+
+  await user.save();
+
+  res.json({
+    message: "User unblocked successfully",
+    user: {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isBlocked: user.isBlocked,
     },
   });
 });
