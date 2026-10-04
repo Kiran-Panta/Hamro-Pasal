@@ -118,6 +118,72 @@ export const getMyOrder = TryCatch(async (req, res) => {
   res.json(order);
 });
 
+export const cancelMyOrder = TryCatch(async (req, res) => {
+  const order = await Order.findOne({
+    _id: req.params.id,
+    user: req.user._id,
+  }).populate("user");
+
+  if (!order) {
+    return res.status(404).json({
+      message: "Order not found",
+    });
+  }
+
+  // Customer can cancel only Pending orders
+  if (order.status !== "Pending") {
+    return res.status(400).json({
+      message: `You cannot cancel an order with status ${order.status}`,
+    });
+  }
+
+  // Restore stock for COD orders
+  // because COD stock was reduced when the order was placed
+  if (order.method === "cod") {
+    for (const item of order.items) {
+      const product = await Product.findById(item.product);
+
+      if (product) {
+        product.stock += item.quantity;
+
+        // Prevent sold from becoming negative
+        product.sold = Math.max(
+          0,
+          product.sold - item.quantity
+        );
+
+        await product.save();
+      }
+    }
+  }
+
+  // Cancel order
+  order.status = "Cancelled";
+
+  await order.save();
+
+  // Send cancellation email
+  await sendOrderConfirmation({
+    email: order.user.email,
+    subject: "Order Cancelled",
+    orderId: order._id,
+    products: order.items,
+    totalAmount: order.subTotal,
+    status: "Cancelled",
+    paymentMethod:
+      order.method === "online"
+        ? "eSewa"
+        : "Cash on Delivery",
+    emailType: "statusUpdate",
+  });
+
+  res.json({
+    success: true,
+    message: "Order cancelled successfully",
+    order,
+  });
+});
+
 // export const updateStatus = TryCatch(async (req, res) => {
 //   if (req.user.role !== "admin") {
 //     return res.status(403).json({

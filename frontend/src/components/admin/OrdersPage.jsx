@@ -141,65 +141,90 @@ const OrdersPage = () => {
                     {moment(order.createdAt).format("DD MMM YYYY")}
                   </TableCell>
 
-                  <TableCell>
-                    {/* <select
-                      value={order.status}
-                      className="w-[150px] px-3 py-2 border rounded-md"
-                      onChange={(e) =>
-                        updateOrderStatus(order._id, e.target.value)
-                      }
-                    >
-                      <option className="text-black" value="Pending">Pending</option>
-                      <option className="text-black" value="Shipped">Shipped</option>
-                      <option className="text-black" value="Delivered">Delivered</option>
-                    </select> */}
-                    {order.status === "Delivered" ||
-                    order.status === "Cancelled" ? (
-                      <span className="text-sm text-muted-foreground">
-                        No further changes
-                      </span>
-                    ) : (
-                      <select
-                        value={order.status}
-                        className="w-[150px] px-3 py-2 border rounded-md"
-                        onChange={(e) =>
-                          updateOrderStatus(order._id, e.target.value)
-                        }
-                      >
-                        {order.status === "Pending" && (
-                          <>
-                            <option className="text-black" value="Pending">
-                              Pending
-                            </option>
+                 <TableCell>
+  {order.status === "Delivered" ||
+  order.status === "Cancelled" ? (
+    <span className="text-sm text-muted-foreground">
+      No further changes
+    </span>
+  ) : (
+    <select
+      value={order.status}
+      className="w-[150px] px-3 py-2 border rounded-md"
+      onChange={(e) =>
+        updateOrderStatus(order._id, e.target.value)
+      }
+    >
+      {/* COD ORDER */}
+      {order.status === "Pending" && (
+        <>
+          <option className="text-black" value="Pending">
+            Pending
+          </option>
 
-                            <option className="text-black" value="Shipped">
-                              Shipped
-                            </option>
+          <option className="text-black" value="Shipped">
+            Shipped
+          </option>
 
-                            <option className="text-black" value="Cancelled">
-                              Cancelled
-                            </option>
-                          </>
-                        )}
+          <option className="text-black" value="Cancelled">
+            Cancelled
+          </option>
+        </>
+      )}
 
-                        {order.status === "Shipped" && (
-                          <>
-                            <option className="text-black" value="Shipped">
-                              Shipped
-                            </option>
+      {/* ONLINE PAYMENT */}
+      {order.status === "Paid" && (
+        <>
+          <option className="text-black" value="Paid">
+            Paid
+          </option>
 
-                            <option className="text-black" value="Delivered">
-                              Delivered
-                            </option>
+          <option className="text-black" value="Processing">
+            Processing
+          </option>
 
-                            <option className="text-black" value="Cancelled">
-                              Cancelled
-                            </option>
-                          </>
-                        )}
-                      </select>
-                    )}
-                  </TableCell>
+          <option className="text-black" value="Cancelled">
+            Cancelled
+          </option>
+        </>
+      )}
+
+      {/* PROCESSING */}
+      {order.status === "Processing" && (
+        <>
+          <option className="text-black" value="Processing">
+            Processing
+          </option>
+
+          <option className="text-black" value="Shipped">
+            Shipped
+          </option>
+
+          <option className="text-black" value="Cancelled">
+            Cancelled
+          </option>
+        </>
+      )}
+
+      {/* SHIPPED */}
+      {order.status === "Shipped" && (
+        <>
+          <option className="text-black" value="Shipped">
+            Shipped
+          </option>
+
+          <option className="text-black" value="Delivered">
+            Delivered
+          </option>
+
+          <option className="text-black" value="Cancelled">
+            Cancelled
+          </option>
+        </>
+      )}
+    </select>
+  )}
+</TableCell>
                 </TableRow>
               ))}
             </TableBody>

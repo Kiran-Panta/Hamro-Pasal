@@ -1,86 +1,3 @@
-// import { OTP } from "../models/Otp.js";
-// import { User } from "../models/User.js";
-// import TryCatch from "../utils/TryCatch.js";
-// import sendOtp from "../utils/sendOtp.js";
-// import jwt from "jsonwebtoken";
-
-// export const loginUser = TryCatch(async (req, res) => {
-//   const { email } = req.body;
-
-//   const subject = "Ecommerce App";
-
-//   const otp = Math.floor(Math.random() * 1000000);
-
-//   const prevOtp = await OTP.findOne({
-//     email,
-//   });
-
-//   if (prevOtp) {
-//     await prevOtp.deleteOne();
-//   }
-
-//   await sendOtp({ email, subject, otp });
-
-//   await OTP.create({ email, otp });
-
-//   res.json({
-//     message: "Otp send to your mail",
-//   });
-// });
-
-// export const verifyUser = TryCatch(async (req, res) => {
-//   const { email, otp } = req.body;
-
-//   const haveOtp = await OTP.findOne({
-//     email,
-//     otp,
-//   });
-
-//   if (!haveOtp)
-//     return res.status(400).json({
-//       message: "Wrong otp",
-//     });
-
-//   let user = await User.findOne({ email });
-
-//   if (user) {
-//     const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
-//       expiresIn: "15d",
-//     });
-
-//     await haveOtp.deleteOne();
-
-//     res.json({
-//       message: "User LoggedIn",
-//       token,
-//       user,
-//     });
-//   } else {
-//     user = await User.create({
-//       email,
-//     });
-
-//     const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
-//       expiresIn: "15d",
-//     });
-
-//     await haveOtp.deleteOne();
-
-//     res.json({
-//       message: "User LoggedIn",
-//       token,
-//       user,
-//     });
-//   }
-// });
-
-// export const myProfile = TryCatch(async (req, res) => {
-//   const user = await User.findById(req.user._id);
-
-//   res.json(user);
-// });
-
-
 import { User } from "../models/User.js";
 import TryCatch from "../utils/TryCatch.js";
 import { OTP } from "../models/Otp.js";
@@ -100,6 +17,12 @@ export const registerUser = TryCatch(async (req, res) => {
     });
   }
 
+  if (password.length < 8) {
+    return res.status(400).json({
+      message: "Password must be at least 8 characters",
+    });
+  }
+
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
@@ -116,11 +39,9 @@ export const registerUser = TryCatch(async (req, res) => {
     password: hashedPassword,
   });
 
-  const token = jwt.sign(
-    { _id: user._id },
-    process.env.JWT_SEC,
-    { expiresIn: "15d" }
-  );
+  const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
+    expiresIn: "15d",
+  });
 
   res.status(201).json({
     message: "Account created successfully",
@@ -162,11 +83,9 @@ export const loginUser = TryCatch(async (req, res) => {
     });
   }
 
-  const token = jwt.sign(
-    { _id: user._id },
-    process.env.JWT_SEC,
-    { expiresIn: "15d" }
-  );
+  const token = jwt.sign({ _id: user._id }, process.env.JWT_SEC, {
+    expiresIn: "15d",
+  });
 
   res.json({
     message: "Login successful",
@@ -185,7 +104,7 @@ export const loginUser = TryCatch(async (req, res) => {
 ========================= */
 export const myProfile = TryCatch(async (req, res) => {
   const user = await User.findById(req.user._id).select(
-    "name email role wishlist"
+    "name email role wishlist",
   );
 
   res.json(user);
@@ -222,8 +141,42 @@ export const forgotPassword = TryCatch(async (req, res) => {
   });
 });
 
+// export const resetPassword = TryCatch(async (req, res) => {
+//   const { email, otp, password } = req.body;
+
+//   if (!password || password.length < 8) {
+//   return res.status(400).json({
+//     message: "Password must be at least 8 characters",
+//   });
+// }
+
+//   const validOtp = await OTP.findOne({ email, otp });
+
+//   if (!validOtp) {
+//     return res.status(400).json({
+//       message: "Invalid OTP",
+//     });
+//   }
+
+//   const hashedPassword = await bcrypt.hash(password, 10);
+
+//   await User.findOneAndUpdate({ email }, { password: hashedPassword });
+
+//   await validOtp.deleteOne();
+
+//   res.json({
+//     message: "Password reset successful",
+//   });
+// });
+
 export const resetPassword = TryCatch(async (req, res) => {
   const { email, otp, password } = req.body;
+
+  if (!password || password.length < 8) {
+    return res.status(400).json({
+      message: "Password must be at least 8 characters",
+    });
+  }
 
   const validOtp = await OTP.findOne({ email, otp });
 
@@ -246,6 +199,7 @@ export const resetPassword = TryCatch(async (req, res) => {
     message: "Password reset successful",
   });
 });
+
 
 /* =========================
    UPDATE USER PROFILE
@@ -290,10 +244,7 @@ export const updateProfile = TryCatch(async (req, res) => {
       });
     }
 
-    const isMatch = await bcrypt.compare(
-      currentPassword,
-      user.password
-    );
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
 
     if (!isMatch) {
       return res.status(400).json({
@@ -301,9 +252,15 @@ export const updateProfile = TryCatch(async (req, res) => {
       });
     }
 
-    if (newPassword.length < 6) {
+    // if (newPassword.length < 6) {
+    //   return res.status(400).json({
+    //     message: "New password must be at least 6 characters",
+    //   });
+    // }
+
+    if (newPassword.length < 8) {
       return res.status(400).json({
-        message: "New password must be at least 6 characters",
+        message: "New password must be at least 8 characters",
       });
     }
 
